@@ -1,0 +1,345 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&display=swap");
+
+:root {
+  /* structure — ultramarine taken down to near-black */
+  --ground: #0a1628;
+  --surface: #111f38;
+  --surface-lift: #16294a;
+  --line: #223a5e;
+
+  /* scarcity — one element per screen */
+  --gold: #ffc726;
+  --gold-dim: #c9971a;
+
+  /* signal */
+  --alert: #ff6b5a;
+
+  /* type */
+  --text: #f0f4f8;
+  --text-muted: #8ca0b8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--ground);
+  color: var(--text);
+  font-family: "Inter Tight", system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* The form is sober and fast, on purpose — no illustration, no motion beyond
+   the 180ms question transition. All visual energy is spent on the
+   dashboard (facilitator.html), per docs/design-system.md. Gold appears in
+   exactly one place here: the selected-option left rule. */
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Progress — a thin rule, no number, no step count. Counters make people rush. */
+.progress-rule {
+  height: 3px;
+  background: var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.progress-rule__fill {
+  height: 100%;
+  background: var(--gold-dim);
+  width: 0%;
+  transition: width 180ms ease-out;
+}
+
+/* Screens */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px 32px;
+}
+
+.screen--entering {
+  animation: enter 180ms ease-out;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen--entering {
+    animation: fade 150ms ease-out;
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .progress-rule__fill {
+    transition: none;
+  }
+}
+
+.screen__nav {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  margin-bottom: 16px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  padding: 8px 8px 8px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+}
+
+.back-btn:hover {
+  color: var(--text);
+}
+
+/* Question header stays put; only the option list scrolls beneath it, so
+   a respondent can compare all six Block C anchors without losing the
+   question itself off-screen. */
+.question-header {
+  position: sticky;
+  top: 3px;
+  background: var(--ground);
+  padding-bottom: 16px;
+  z-index: 5;
+}
+
+.question-header__block {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+}
+
+.question-header__prompt {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.question-header__help {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin: 8px 0 0;
+}
+
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 120ms ease-out, border-color 120ms ease-out;
+}
+
+.option:hover {
+  background: var(--surface-lift);
+}
+
+.option[aria-pressed="true"] {
+  background: var(--surface-lift);
+  border-left-color: var(--gold);
+}
+
+.option__note {
+  display: block;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.multi-select-hint {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: -4px 0 4px;
+}
+
+.text-input,
+.text-area {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 17px;
+  padding: 14px 16px;
+  min-height: 48px;
+}
+
+.text-area {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.char-count {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: right;
+  margin-top: 6px;
+}
+
+.primary-btn {
+  min-height: 48px;
+  margin-top: 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--gold);
+  color: var(--ground);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn:disabled {
+  background: var(--line);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.welcome,
+.closing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.welcome h1,
+.closing h1 {
+  font-size: 26px;
+  margin: 0;
+}
+
+.welcome p,
+.closing p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.consent-note {
+  font-size: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 8px;
+}
+
+.fallback-code {
+  background: var(--surface);
+  border: 1px solid var(--alert);
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.fallback-code__value {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--alert);
+}
+
+/* Grouped-by-block on wider viewports. This view is not held to the same
+   anti-counter discipline as mobile — it's the minority path (facilitator
+   or IT respondent on a laptop, not the QR/phone flow the instrument is
+   designed around), and its scroll length making progress visible is an
+   accepted tradeoff, not an oversight. */
+@media (min-width: 768px) {
+  .app {
+    max-width: 720px;
+  }
+
+  .app[data-layout="grouped"] .screen {
+    display: none;
+  }
+
+  .app[data-layout="grouped"] .block-panel {
+    display: block;
+    padding: 32px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .block-panel__title {
+    font-size: 20px;
+    margin: 0 0 24px;
+  }
+
+  .block-panel .question-block {
+    margin-bottom: 40px;
+  }
+
+  .block-panel .question-header {
+    position: static;
+    background: none;
+  }
+
+  .block-panel .option-list {
+    overflow-y: visible;
+  }
+}
+
+.block-panel {
+  display: none;
+}
