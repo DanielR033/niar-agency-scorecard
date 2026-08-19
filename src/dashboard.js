@@ -87,18 +87,27 @@ export async function initDashboard(root) {
     lastSignature = signature;
 
     const scores = computeScores(responses, instrument);
-    const tier = evaluateIntegrationTier(responses, instrument, scores);
-    const gates = evaluateValidationGateRisk(responses, instrument, scores);
-    const preprocessing = evaluatePreprocessingRequirements(responses, instrument, scores);
     const divergence = computeDivergence(responses, instrument, scores);
-    const discovery = aggregateAgencyAnswers(responses, instrument);
 
     renderCounter(root, responses.length, storage.listPendingFallbackCodes(), isFixture);
-    renderTier(root, tier, discovery);
-    renderGates(root, gates, instrument);
-    renderPreprocessing(root, preprocessing);
-    renderDivergence(root, divergence, instrument, notes);
     updateLegend(root, session);
+
+    // With zero responses, every Discovery-block field is undefined, and
+    // conditions like "B4 != 'none'" evaluate true against `undefined` —
+    // showing pre-processing requirements and a tier nobody's data actually
+    // implied yet. Show an honest waiting state instead of derived noise.
+    if (responses.length === 0) {
+      renderWaiting(root);
+    } else {
+      const tier = evaluateIntegrationTier(responses, instrument, scores);
+      const gates = evaluateValidationGateRisk(responses, instrument, scores);
+      const preprocessing = evaluatePreprocessingRequirements(responses, instrument, scores);
+      const discovery = aggregateAgencyAnswers(responses, instrument);
+      renderTier(root, tier, discovery);
+      renderGates(root, gates, instrument);
+      renderPreprocessing(root, preprocessing);
+    }
+    renderDivergence(root, divergence, instrument, notes);
 
     const payload = {
       dimensionScores: scores.dimensionScores,
@@ -200,6 +209,13 @@ function renderCounter(root, count, pendingCodes, isFixture) {
   fallbackNote.textContent = pendingCodes.length
     ? `${pendingCodes.length} response${pendingCodes.length === 1 ? "" : "s"} held on a respondent's phone, not yet counted: ${pendingCodes.join(", ")}`
     : "";
+}
+
+function renderWaiting(root) {
+  const waitingHtml = `<p class="empty-note">Waiting for the first response.</p>`;
+  root.querySelector("#tier-panel").innerHTML = `<p class="panel__title">Integration tier</p>${waitingHtml}`;
+  root.querySelector("#gates-panel").innerHTML = `<p class="panel__title">Validation pipeline risk</p>${waitingHtml}`;
+  root.querySelector("#preproc-panel").innerHTML = `<p class="panel__title">Pre-processing requirements</p>${waitingHtml}`;
 }
 
 function renderTier(root, tier, discovery) {

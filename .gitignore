@@ -1,3 +1,7 @@
 .DS_Store
 node_modules/
 .env
+
+# Session-specific run sheets contain facilitator keys — never commit
+# to this public repo. Keep them local, share out of band.
+handoff/
