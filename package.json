@@ -1,0 +1,9 @@
+{
+  "name": "niar-agency-scorecard",
+  "private": true,
+  "type": "module",
+  "description": "Logic modules and tests for the NIAR Agency Readiness Scorecard. The site itself ships as plain HTML/CSS/JS with no build step — this file exists only so `node --test` resolves ES module imports and so `npm test` is a convenient entry point.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
