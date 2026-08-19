@@ -9,14 +9,18 @@ import { evaluateIntegrationTier, evaluateValidationGateRisk, evaluatePreprocess
 import { computeDivergence } from "./divergence.js";
 import { aggregateAgencyAnswers } from "./aggregate.js";
 import { createRadar } from "./radar.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const POLL_MS = 5000;
 
-// One-function stub: the real check (session code + facilitator key against
-// the Supabase SECURITY DEFINER RPC) replaces this body when Supabase is
-// wired. Every other line in this file stays the same.
-function checkFacilitatorKey(_key) {
-  return true;
+// The real gate is supabase/schema.sql's get_session_responses RPC, which
+// requires the correct session code AND facilitator key and — by design —
+// returns zero rows for a wrong key exactly as it would for a right key on
+// an empty session (no oracle to probe which). So there's nothing for this
+// function to check beyond "was a key supplied at all"; the security work
+// happens server-side, not here.
+function checkFacilitatorKey(key) {
+  return Boolean(key);
 }
 
 function signatureOf(responses) {
@@ -27,16 +31,26 @@ export async function initDashboard(root) {
   const params = new URLSearchParams(location.search);
   const sessionCode = (params.get("s") || "DEMO").toUpperCase();
   const facilitatorKey = params.get("k") ?? "";
+  // ?adapter=local forces the offline/dev adapter with seeded fixtures —
+  // e.g. for tuning the reveal with no connectivity. Every real session
+  // runs on 'supabase'.
+  const adapter = params.get("adapter") === "local" ? "local" : "supabase";
 
   if (!checkFacilitatorKey(facilitatorKey)) {
-    root.innerHTML = `<div class="dash"><p>Facilitator key not recognised.</p></div>`;
+    root.innerHTML = `<div class="dash"><p>Missing facilitator key — append &k=FACILITATOR_KEY to this URL.</p></div>`;
     return;
   }
 
   const questionsUrl = new URL("./questions.json", import.meta.url);
   const raw = await fetch(questionsUrl).then((r) => r.json());
   const instrument = loadInstrument(raw);
-  const storage = createStorage({ adapter: "local", sessionCode });
+  const storage = createStorage({
+    adapter,
+    sessionCode,
+    facilitatorKey,
+    projectUrl: SUPABASE_URL,
+    anonKey: SUPABASE_ANON_KEY,
+  });
   const session = await storage.session();
 
   if (!session) {
@@ -56,11 +70,12 @@ export async function initDashboard(root) {
 
   // 'local' adapter only: seed fixtures when there are zero real responses.
   // Gated on adapter type, not on data emptiness, so a real empty Wave 2
-  // session (once Supabase is wired) renders "waiting for respondents"
-  // instead of silently showing fake data.
+  // session on 'supabase' renders "waiting for respondents" instead of
+  // silently showing fake data — a real session with a wrong or missing
+  // facilitator key also lands here honestly empty, never on fixtures.
   async function loadResponses() {
-    const real = storage.listResponses();
-    if (real.length > 0) return { responses: real, isFixture: false };
+    const real = await storage.listResponses();
+    if (adapter !== "local" || real.length > 0) return { responses: real, isFixture: false };
     const { generateFixtureResponses } = await import("./dev-fixtures.js");
     return { responses: generateFixtureResponses(), isFixture: true };
   }

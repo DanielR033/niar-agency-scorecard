@@ -9,6 +9,7 @@
 
 import { loadInstrument } from "./instrument.js";
 import { createStorage } from "./storage.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const WIDE_QUERY = "(min-width: 768px)";
 
@@ -16,11 +17,20 @@ export async function initForm(root) {
   const params = new URLSearchParams(location.search);
   const sessionCode = (params.get("s") || "DEMO").toUpperCase();
   const simulateFailureRate = Number(params.get("failrate") || 0);
+  // ?adapter=local forces the offline/dev adapter — e.g. for a demo with
+  // no connectivity. Every real session runs on 'supabase'.
+  const adapter = params.get("adapter") === "local" ? "local" : "supabase";
 
   const questionsUrl = new URL("./questions.json", import.meta.url);
   const raw = await fetch(questionsUrl).then((r) => r.json());
   const instrument = loadInstrument(raw);
-  const storage = createStorage({ adapter: "local", sessionCode, simulateFailureRate });
+  const storage = createStorage({
+    adapter,
+    sessionCode,
+    simulateFailureRate,
+    projectUrl: SUPABASE_URL,
+    anonKey: SUPABASE_ANON_KEY,
+  });
   const session = await storage.session();
 
   const state = {
@@ -85,7 +95,15 @@ export async function initForm(root) {
     })[c]);
   }
 
+  let submitting = false;
+
   async function submitAll() {
+    // Guards against a second Next tap (or a slow-network double-click)
+    // firing a second insert while the first submit() is still in flight —
+    // the UI doesn't leave the last question until this resolves, so
+    // without this a real respondent on slow Wi-Fi could submit twice.
+    if (submitting) return;
+    submitting = true;
     state.answers.A1 = session.agencyName;
     const payload = {
       sessionCode,
@@ -96,10 +114,12 @@ export async function initForm(root) {
     };
     state.result = await storage.submit(payload);
     state.phase = "closing";
+    submitting = false;
     render();
   }
 
   function goNext() {
+    if (submitting) return;
     const steps = visibleQuestions();
     if (state.currentIndex + 1 >= steps.length) {
       submitAll();
@@ -364,7 +384,10 @@ export async function initForm(root) {
     btn.className = "primary-btn";
     btn.textContent = "Next";
     btn.disabled = !isSatisfied(question);
-    btn.addEventListener("click", goNext);
+    btn.addEventListener("click", () => {
+      btn.disabled = true;
+      goNext();
+    });
     return btn;
   }
 
