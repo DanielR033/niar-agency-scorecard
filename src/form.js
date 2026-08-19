@@ -10,6 +10,7 @@
 import { loadInstrument } from "./instrument.js";
 import { createStorage } from "./storage.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { fetchWithTimeout } from "./net.js";
 
 const WIDE_QUERY = "(min-width: 768px)";
 
@@ -22,7 +23,7 @@ export async function initForm(root) {
   const adapter = params.get("adapter") === "local" ? "local" : "supabase";
 
   const questionsUrl = new URL("./questions.json", import.meta.url);
-  const raw = await fetch(questionsUrl).then((r) => r.json());
+  const raw = await fetchWithTimeout(questionsUrl).then((r) => r.json());
   const instrument = loadInstrument(raw);
   const storage = createStorage({
     adapter,

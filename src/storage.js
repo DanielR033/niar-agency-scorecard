@@ -17,6 +17,8 @@
 // promoteFallback) require a facilitatorKey on the supabase adapter — see
 // supabase/schema.sql's get_session_responses.
 
+import { fetchWithTimeout } from "./net.js";
+
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I — read aloud on a call
 
 function generateFallbackCode() {
@@ -138,7 +140,11 @@ function supabaseAdapter({
   };
 
   async function callRpc(name, body) {
-    const res = await fetch(`${restUrl}/rpc/${name}`, { method: "POST", headers, body: JSON.stringify(body) });
+    const res = await fetchWithTimeout(`${restUrl}/rpc/${name}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
     if (!res.ok) throw new Error(`Supabase RPC ${name} failed: ${res.status}`);
     return res.json();
   }
@@ -147,7 +153,7 @@ function supabaseAdapter({
     if (Math.random() < simulateFailureRate) {
       throw new Error("simulated submission failure");
     }
-    const res = await fetch(`${restUrl}/responses`, {
+    const res = await fetchWithTimeout(`${restUrl}/responses`, {
       method: "POST",
       headers: { ...headers, Prefer: "return=minimal" },
       body: JSON.stringify({

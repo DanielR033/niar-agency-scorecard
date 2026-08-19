@@ -10,10 +10,20 @@
     <link rel="stylesheet" href="./assets/facilitator.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="padding:24px;color:#8ca0b8;font-family:system-ui,sans-serif">Loading…</div>
+    </div>
     <script type="module">
       import { initDashboard } from "./src/dashboard.js";
-      initDashboard(document.getElementById("root"));
+      initDashboard(document.getElementById("root")).catch((err) => {
+        console.error(err);
+        document.getElementById("root").innerHTML =
+          '<div style="padding:24px;color:#f0f4f8;font-family:system-ui,sans-serif">' +
+          '<h1 style="font-size:22px">Couldn\'t load the dashboard</h1>' +
+          '<p style="color:#8ca0b8">Check your connection and reload this page.</p>' +
+          '<button onclick="location.reload()" style="margin-top:12px;padding:12px 20px;background:#ffc726;border:none;border-radius:4px;font-weight:600;font-size:16px">Reload</button>' +
+          "</div>";
+      });
     </script>
   </body>
 </html>

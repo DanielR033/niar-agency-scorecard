@@ -10,6 +10,7 @@ import { computeDivergence } from "./divergence.js";
 import { aggregateAgencyAnswers } from "./aggregate.js";
 import { createRadar } from "./radar.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { fetchWithTimeout } from "./net.js";
 
 const POLL_MS = 5000;
 
@@ -42,7 +43,7 @@ export async function initDashboard(root) {
   }
 
   const questionsUrl = new URL("./questions.json", import.meta.url);
-  const raw = await fetch(questionsUrl).then((r) => r.json());
+  const raw = await fetchWithTimeout(questionsUrl).then((r) => r.json());
   const instrument = loadInstrument(raw);
   const storage = createStorage({
     adapter,
