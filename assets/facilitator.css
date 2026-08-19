@@ -1,0 +1,335 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap");
+
+/* Projected/video-call screen: minimum body 18px, no hairlines under 2px,
+   assume 16:9 but never break below 1280px wide, per design-system.md's
+   "Projection constraints". */
+
+.dash {
+  min-width: 1280px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 40px 20px;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dash__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 32px;
+}
+
+/* The radar stays put — the room's attention anchor — while the side
+   column (tier, gates, divergence cards) scrolls internally rather than
+   pushing the whole page taller than the projected/video-call viewport. */
+.radar-panel,
+.side {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dash__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
+.dash__agency {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dash__meta {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.rebaseline-banner {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border-left: 3px solid var(--sea, #2dd4bf);
+  border-radius: 4px;
+  padding: 14px 18px;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.rebaseline-banner strong {
+  color: var(--sea, #2dd4bf);
+}
+
+.radar-panel {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.radar-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 620px;
+  margin: 0 auto;
+}
+
+.score-figure {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.score-figure__value {
+  font-family: "Fraunces", "Georgia", serif;
+  font-weight: 600;
+  font-size: 96px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.score-figure__label {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.radar-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toggle-btn {
+  background: var(--surface-lift);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.toggle-btn[aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.legend__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.panel__title {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+
+.counter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 18px;
+}
+
+.counter-row__value {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.fallback-entry {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+}
+
+.fallback-entry input {
+  flex: 1;
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 16px;
+}
+
+.fallback-entry button {
+  background: var(--gold);
+  color: var(--ground);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tier-badge {
+  display: inline-block;
+  font-family: "Fraunces", serif;
+  font-weight: 700;
+  font-size: 40px;
+  color: var(--gold);
+  margin-right: 12px;
+}
+
+.tier-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tier-implication {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.gate-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gate-chip {
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: var(--surface-lift);
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+}
+
+.gate-chip[data-risk="true"] {
+  color: var(--alert);
+  border-color: var(--alert);
+}
+
+.preproc-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.divergence-card {
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 18px;
+  opacity: 0;
+  transform: translateX(16px);
+  animation: card-in 220ms ease-out forwards;
+  border-left: 3px solid var(--line);
+}
+
+.divergence-card--halo {
+  border-left-color: var(--alert);
+  animation: card-in 220ms ease-out forwards, halo-pulse 1.8s ease-out 220ms 1;
+}
+
+@keyframes card-in {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes halo-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 90, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(255, 107, 90, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 90, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .divergence-card,
+  .divergence-card--halo {
+    animation: card-in 150ms ease-out forwards;
+    opacity: 0;
+    transform: none;
+  }
+}
+
+.divergence-card__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--alert);
+  margin: 0 0 6px;
+}
+
+.divergence-card__detail {
+  font-size: 16px;
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+.divergence-card__probe {
+  font-size: 18px;
+  font-style: italic;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.divergence-card__note-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+.divergence-card__note {
+  width: 100%;
+  background: var(--ground);
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  padding: 8px 10px;
+  min-height: 44px;
+}
+
+.empty-note {
+  color: var(--text-muted);
+  font-size: 15px;
+}

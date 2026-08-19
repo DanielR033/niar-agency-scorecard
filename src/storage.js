@@ -80,6 +80,31 @@ function localAdapter({ sessionCode, simulateFailureRate = 0, submitAttempts = 3
       this.clearDraft();
       return { status: "queued-local", code };
     },
+
+    // facilitator.html only, from here down.
+
+    listResponses() {
+      return readJSON(responsesKey, []);
+    },
+
+    listPendingFallbackCodes() {
+      return Object.keys(readJSON(fallbackKey, {}));
+    },
+
+    // Moves a held fallback-code response into `responses` — the same
+    // array submit() writes to and listResponses() reads — so there is
+    // exactly one place a response lives once it's counted. Never writes
+    // to `responses` by any other path.
+    async promoteFallback(code) {
+      const held = readJSON(fallbackKey, {});
+      const payload = held[code];
+      if (!payload) return { status: "not-found" };
+      const { heldAt, ...responsePayload } = payload;
+      await attemptSubmit(responsePayload);
+      delete held[code];
+      localStorage.setItem(fallbackKey, JSON.stringify(held));
+      return { status: "ok" };
+    },
   };
 }
 
