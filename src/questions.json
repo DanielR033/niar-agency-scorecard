@@ -1,0 +1,700 @@
+{
+  "instrument": {
+    "id": "niar-agency-readiness-scorecard",
+    "version": "1.0.0",
+    "title": "NIAR Agency Readiness Scorecard",
+    "subtitle": "National Infrastructure Asset Repository — Barbados",
+    "framework": "IDB Technical Cooperation RG-T4271-P001-T003",
+    "language": "en",
+    "estimated_minutes": [12, 14],
+    "prepared_by": "Azurian Consulting",
+    "notes": "Operationalises Step 1 of the Agency Onboarding Procedure (Annex 1, Table 7). Scores are never displayed to respondents."
+  },
+
+  "welcome": {
+    "heading": "NIAR Agency Readiness Scorecard",
+    "body": [
+      "Thank you for taking part. This short assessment helps us understand how your agency works with its information today, so that NIAR can be built around what you actually do rather than around assumptions.",
+      "This is not an audit and no agency is being ranked. There are no right or wrong answers — the most useful answer is the honest one.",
+      "It takes about 12 minutes. Please choose the description that best matches how your team works on a normal week."
+    ],
+    "consent_note": "Your individual answers are used only to build your agency's profile and are reported in aggregate."
+  },
+
+  "scale": {
+    "reference": "Digital Maturity Assessment, Table 16 — Digital Maturity Spectrum (0–5)",
+    "levels": [
+      { "value": 0, "name": "Nonexistent", "label": "Ad Hoc / Absent" },
+      { "value": 1, "name": "Initial", "label": "Fragmented / Siloed" },
+      { "value": 2, "name": "Emerging", "label": "Emerging Federated Stage" },
+      { "value": 3, "name": "Defined", "label": "Structured Federated Stage" },
+      { "value": 4, "name": "Managed", "label": "Integrated Enterprise Stage" },
+      { "value": 5, "name": "Optimized", "label": "Intelligent National Platform" }
+    ]
+  },
+
+  "dimensions": [
+    { "id": "tech_infrastructure", "label": "Technology & Infrastructure", "items": 2 },
+    { "id": "interoperability", "label": "Interoperability & Integration", "items": 3 },
+    { "id": "data_management", "label": "Data Management & Quality", "items": 3 },
+    { "id": "metadata_discoverability", "label": "Metadata & Discoverability", "items": 2 },
+    { "id": "security_access", "label": "Security & Access Control", "items": 2 },
+    { "id": "operational_processes", "label": "Operational Processes", "items": 2 },
+    { "id": "governance_roles", "label": "Governance & Institutional Roles", "items": 1 },
+    { "id": "human_capacity", "label": "Human Capacity", "items": 1 }
+  ],
+
+  "scoring": {
+    "dimension_score": "unweighted mean of the item scores assigned to that dimension",
+    "agency_score": "unweighted mean of the eight dimension scores",
+    "baseline_overlay": 2.1,
+    "baseline_label": "NIAR ecosystem baseline — Emerging Federated Stage",
+    "rounding": 1
+  },
+
+  "blocks": [
+    {
+      "id": "A",
+      "title": "About you",
+      "intro": "A few details so we can read the results properly.",
+      "questions": [
+        {
+          "id": "A1",
+          "type": "hidden",
+          "prompt": "Agency",
+          "source": "session_config",
+          "feeds": ["session_binding"]
+        },
+        {
+          "id": "A2",
+          "type": "text_short",
+          "prompt": "Your name",
+          "required": false,
+          "help": "Optional. You may leave this blank.",
+          "feeds": ["follow_up_contact"]
+        },
+        {
+          "id": "A3",
+          "type": "single_select",
+          "prompt": "Which best describes your role?",
+          "required": true,
+          "options": [
+            { "value": "executive", "label": "Executive or Director", "band": "leadership" },
+            { "value": "manager", "label": "Manager or Supervisor", "band": "leadership" },
+            { "value": "gis_it", "label": "GIS or IT specialist", "band": "technical" },
+            { "value": "field_ops", "label": "Field or operations staff", "band": "operational" },
+            { "value": "records", "label": "Records or data entry", "band": "operational" },
+            { "value": "other", "label": "Other", "band": "unassigned" }
+          ],
+          "feeds": ["divergence_role_bands"]
+        },
+        {
+          "id": "A4",
+          "type": "single_select",
+          "prompt": "How do you work with your agency's information?",
+          "required": true,
+          "options": [
+            { "value": "collect", "label": "I collect or create it" },
+            { "value": "process", "label": "I process or map it" },
+            { "value": "decide", "label": "I use it to make decisions" },
+            { "value": "manage", "label": "I manage the team that does" },
+            { "value": "none", "label": "I don't work with it directly" }
+          ],
+          "feeds": ["divergence_role_bands", "stakeholder_role_mapping"]
+        },
+        {
+          "id": "A5",
+          "type": "single_select",
+          "prompt": "How long have you worked at this agency?",
+          "required": true,
+          "options": [
+            { "value": "lt2", "label": "Under 2 years" },
+            { "value": "2_5", "label": "2 to 5 years" },
+            { "value": "6_10", "label": "6 to 10 years" },
+            { "value": "gt10", "label": "Over 10 years" }
+          ],
+          "feeds": ["knowledge_institutionalisation"]
+        }
+      ]
+    },
+
+    {
+      "id": "B",
+      "title": "Your systems and data",
+      "intro": "These questions describe the tools and information your agency works with today.",
+      "questions": [
+        {
+          "id": "B1",
+          "type": "single_select",
+          "prompt": "Does your agency collect geospatial data?",
+          "required": true,
+          "source": "rowmell_r1_verbatim",
+          "options": [
+            { "value": "yes", "label": "Yes" },
+            { "value": "no", "label": "No" },
+            { "value": "secondary", "label": "Secondary data", "note": "We use data produced by others" }
+          ],
+          "feeds": ["producer_consumer_classification"]
+        },
+        {
+          "id": "B2",
+          "type": "multi_select",
+          "prompt": "Does your agency run any of the following systems?",
+          "required": true,
+          "source": "rowmell_r2_verbatim",
+          "help": "Select all that apply.",
+          "options": [
+            { "value": "arcmap", "label": "ArcMap", "tags": ["authoring", "esri", "legacy"] },
+            { "value": "arcgis_enterprise", "label": "ArcGIS Enterprise", "tags": ["authoring", "esri", "enterprise"] },
+            { "value": "arcgis_online", "label": "ArcGIS Online", "tags": ["authoring", "esri", "cloud"] },
+            { "value": "qgis", "label": "QGIS", "tags": ["authoring", "open_source"] },
+            { "value": "scada", "label": "SCADA", "tags": ["operational", "telemetry", "phase3"] },
+            { "value": "autocad", "label": "AutoCAD", "tags": ["authoring", "cad", "conversion_required"] },
+            { "value": "erp", "label": "ERP (Enterprise Resource Planning tool — e.g. SAP)", "tags": ["operational", "api_candidate"] },
+            { "value": "wms", "label": "WMS (Work Management System)", "tags": ["operational", "api_candidate"] },
+            { "value": "cis", "label": "CIS (Customer Information System)", "tags": ["operational", "api_candidate"] },
+            { "value": "dms", "label": "DMS (Document Management System)", "tags": ["operational", "digitisation_relevant"] },
+            { "value": "ms_office", "label": "MS Office", "tags": ["authoring", "unstructured"] }
+          ],
+          "feeds": ["annex1_table1", "tier_assignment"],
+          "reconciliation_note": "Presented verbatim to preserve comparability with the 13 agencies already surveyed. Authoring stack and operational systems are separated downstream via tags, not in the respondent-facing list. DMS is present here but absent from Annex 1 Table 1 — review the existing 13 responses for unreported DMS data."
+        },
+        {
+          "id": "B3",
+          "type": "multi_select",
+          "prompt": "Which geospatial data formats does your agency use?",
+          "required": true,
+          "source": "rowmell_r3_verbatim",
+          "help": "Select all that apply.",
+          "options": [
+            { "value": "shapefiles", "label": "Shapefiles", "tags": ["core"] },
+            { "value": "cad_files", "label": "CAD files", "tags": ["core", "conversion_required"] },
+            { "value": "ms_files", "label": "MS files (e.g. xls)", "tags": ["core", "geocoding_required"] },
+            { "value": "kmz_kml", "label": "KMZ / KML", "tags": ["core"] },
+            { "value": "paper_based", "label": "Paper based", "tags": ["core", "digitisation_required"] },
+            { "value": "other", "label": "Other", "tags": ["core"] }
+          ],
+          "feeds": ["annex1_table2", "gap_g1", "gap_g2"],
+          "reconciliation_note": "Verbatim. Annex 1 Table 2 percentages derive from this exact option set — do not modify."
+        },
+        {
+          "id": "B3b",
+          "type": "multi_select",
+          "prompt": "Do you also use any of these?",
+          "required": false,
+          "help": "Select all that apply. Leave blank if none.",
+          "options": [
+            { "value": "geodatabase", "label": "Geodatabase (file or enterprise)" },
+            { "value": "geopackage", "label": "GeoPackage" },
+            { "value": "geojson", "label": "GeoJSON" },
+            { "value": "pdf_reports", "label": "PDF reports or scanned maps" },
+            { "value": "photographs", "label": "Photographs of sites or assets" },
+            { "value": "database", "label": "A database that is not geospatial (e.g. Access, SQL)" }
+          ],
+          "feeds": ["standardisation_engine_load"],
+          "reconciliation_note": "Additive set, kept separate from B3 so that the historical percentage comparison against the 13 agencies remains clean."
+        },
+        {
+          "id": "B4",
+          "type": "single_select",
+          "prompt": "Roughly how much of your key information exists only on paper?",
+          "required": true,
+          "source": "new_niar_addition",
+          "help": "Your best estimate is fine.",
+          "options": [
+            { "value": "none", "label": "None — everything is digital", "paper_weight": 0 },
+            { "value": "some", "label": "Some — under a quarter", "paper_weight": 1 },
+            { "value": "half", "label": "About half", "paper_weight": 2 },
+            { "value": "most", "label": "Most — more than half", "paper_weight": 3 },
+            { "value": "almost_all", "label": "Almost all of it", "paper_weight": 4 }
+          ],
+          "feeds": ["gap_g1", "tier_d_trigger", "digitisation_sub_layer_sizing"],
+          "reconciliation_note": "Key addition. The original instrument captured the presence of paper but never its volume, which is what determines Tier D assignment and the sizing of the Digitization Sub-Layer."
+        },
+        {
+          "id": "B5",
+          "type": "single_select",
+          "prompt": "Does your agency use GPS data collecting equipment?",
+          "required": true,
+          "source": "rowmell_r4_verbatim",
+          "options": [
+            { "value": "yes", "label": "Yes" },
+            { "value": "no", "label": "No" },
+            { "value": "other", "label": "Other" }
+          ],
+          "feeds": ["positional_accuracy", "v2_gate_risk"]
+        },
+        {
+          "id": "B6",
+          "type": "multi_select",
+          "prompt": "Which GPS devices are used?",
+          "required": false,
+          "source": "rowmell_r5_verbatim",
+          "conditional": { "question": "B5", "equals": ["yes", "other"] },
+          "help": "Select all that apply.",
+          "options": [
+            { "value": "tablet_phone", "label": "Tablet or phone", "accuracy": "low" },
+            { "value": "handheld_gps", "label": "Handheld GPS device", "accuracy": "medium" },
+            { "value": "rtk_gps", "label": "RTK GPS", "accuracy": "high" },
+            { "value": "static_gps", "label": "Static GPS", "accuracy": "high" },
+            { "value": "total_station", "label": "Total Station", "accuracy": "high" },
+            { "value": "other", "label": "Other", "accuracy": "unknown" }
+          ],
+          "feeds": ["positional_accuracy", "v2_gate_risk"]
+        },
+        {
+          "id": "B7",
+          "type": "single_select",
+          "prompt": "Which coordinate system do you normally use?",
+          "required": true,
+          "source": "new_niar_addition",
+          "help": "If you are not sure, that is completely fine — \"Not sure\" is a genuinely useful answer for us.",
+          "options": [
+            { "value": "barbados_grid", "label": "Barbados National Grid" },
+            { "value": "wgs84", "label": "WGS84 latitude and longitude" },
+            { "value": "utm", "label": "UTM" },
+            { "value": "varies", "label": "Different ones depending on the dataset" },
+            { "value": "not_sure", "label": "Not sure" }
+          ],
+          "feeds": ["crs_normalisation", "v2_gate_risk"],
+          "open_item": "Confirm the national CRS and its EPSG code with Lands & Surveys before the standardisation phase; present the confirmed value first in the list. Does not block deployment.",
+          "facilitator_note": "This item measures awareness, not ground truth — authoritative CRS is read from the files themselves (.prj, geodatabase definition) at onboarding. Dispersion across respondents in the same agency is the signal: it indicates no declared internal convention and predicts V2 gate failures. In the room, do not ask which CRS they use; ask whether anyone has had a layer from another agency fail to line up where it should."
+        },
+        {
+          "id": "B8",
+          "type": "single_select",
+          "prompt": "How often is your main information updated?",
+          "required": true,
+          "source": "new_niar_addition",
+          "options": [
+            { "value": "daily", "label": "Continuously or daily" },
+            { "value": "weekly", "label": "Weekly" },
+            { "value": "monthly", "label": "Monthly" },
+            { "value": "quarterly", "label": "Quarterly" },
+            { "value": "yearly", "label": "Once a year or less" },
+            { "value": "project", "label": "Only when a project requires it" }
+          ],
+          "feeds": ["freshness_kpi", "tier_a_datasets"]
+        },
+        {
+          "id": "B9",
+          "type": "single_select",
+          "prompt": "Could another agency obtain your data today?",
+          "required": true,
+          "source": "new_niar_addition",
+          "options": [
+            { "value": "published", "label": "Yes — it is published online and they can access it", "tier_signal": "A" },
+            { "value": "export_send", "label": "Yes — but we must export it and send it", "tier_signal": "B" },
+            { "value": "approval", "label": "Only after an approval process", "tier_signal": "B" },
+            { "value": "internal", "label": "No — it stays internal", "tier_signal": "B" },
+            { "value": "never_asked", "label": "We have never been asked", "tier_signal": "B" }
+          ],
+          "feeds": ["tier_assignment", "interoperability_evidence"]
+        },
+        {
+          "id": "B10",
+          "type": "multi_select",
+          "prompt": "Do you hold information that could not be shared openly?",
+          "required": true,
+          "source": "new_niar_addition",
+          "help": "Select all that apply.",
+          "options": [
+            { "value": "personal_data", "label": "Personal data of citizens", "classification": "restricted" },
+            { "value": "commercial", "label": "Commercially sensitive information", "classification": "restricted" },
+            { "value": "security", "label": "Security-sensitive locations", "classification": "restricted" },
+            { "value": "third_party", "label": "Data owned by a third party", "classification": "controlled" },
+            { "value": "nothing", "label": "Nothing restricted", "classification": "open" },
+            { "value": "not_sure", "label": "Not sure", "classification": "unknown" }
+          ],
+          "feeds": ["v5_gate", "classification_tier", "private_sector_reciprocity"]
+        }
+      ]
+    },
+
+    {
+      "id": "C",
+      "title": "How your team works today",
+      "intro": "For each question, choose the description that most resembles how your team works on a normal week. There are no right answers.",
+      "questions": [
+        {
+          "id": "C1",
+          "type": "scale_anchored",
+          "dimension": "tech_infrastructure",
+          "prompt": "Where does your team's main information live?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "On individual computers or USB drives" },
+            { "score": 1, "label": "On a shared folder or network drive" },
+            { "score": 2, "label": "On a departmental server" },
+            { "score": 3, "label": "In a managed database or geodatabase used by the whole team" },
+            { "score": 4, "label": "On an enterprise platform with backup and defined administration" },
+            { "score": 5, "label": "On an enterprise or cloud platform with monitoring, backup and documented recovery" }
+          ]
+        },
+        {
+          "id": "C2",
+          "type": "scale_anchored",
+          "dimension": "tech_infrastructure",
+          "prompt": "If your main system stopped working tomorrow, what would happen?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "We would lose information — there is no copy" },
+            { "score": 1, "label": "Someone probably has a copy somewhere" },
+            { "score": 2, "label": "We make copies from time to time, manually" },
+            { "score": 3, "label": "Backups run automatically and we know where they are" },
+            { "score": 4, "label": "Backups are automatic and we have tested restoring them" },
+            { "score": 5, "label": "We have a tested recovery plan with a defined recovery time" }
+          ]
+        },
+        {
+          "id": "C3",
+          "type": "scale_anchored",
+          "dimension": "interoperability",
+          "prompt": "How do you usually share data with another agency?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "We don't share data" },
+            { "score": 1, "label": "Printed copies or PDF" },
+            { "score": 2, "label": "Email with a file attached" },
+            { "score": 3, "label": "A shared drive or file transfer service" },
+            { "score": 4, "label": "An online map service others can connect to" },
+            { "score": 5, "label": "A service or API that other systems read automatically" }
+          ]
+        },
+        {
+          "id": "C4",
+          "type": "scale_anchored",
+          "dimension": "interoperability",
+          "prompt": "When you receive data from another agency, how much work is needed before you can use it?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "We cannot use it at all" },
+            { "score": 1, "label": "A great deal — we retype or redraw it" },
+            { "score": 2, "label": "Significant — we reformat and correct fields by hand" },
+            { "score": 3, "label": "Some — a known conversion we do routinely" },
+            { "score": 4, "label": "Little — formats mostly match ours" },
+            { "score": 5, "label": "None — it loads directly into our system" }
+          ]
+        },
+        {
+          "id": "C5",
+          "type": "scale_anchored",
+          "dimension": "interoperability",
+          "prompt": "Do the field names and codes in your datasets follow a written standard?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "No — each person names things their own way" },
+            { "score": 1, "label": "There is a habit, but nothing written down" },
+            { "score": 2, "label": "One or two datasets follow an internal convention" },
+            { "score": 3, "label": "We have a written internal standard for our main datasets" },
+            { "score": 4, "label": "Our standard is aligned with a national or international one" },
+            { "score": 5, "label": "Compliance is checked automatically before publishing" }
+          ]
+        },
+        {
+          "id": "C6",
+          "type": "scale_anchored",
+          "dimension": "data_management",
+          "prompt": "Who checks that the data is correct before it is used or shared?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "Nobody checks" },
+            { "score": 1, "label": "The person who made it, informally" },
+            { "score": 2, "label": "A colleague reviews it when there is time" },
+            { "score": 3, "label": "A named person reviews it as part of the process" },
+            { "score": 4, "label": "We apply a checklist or set of rules to every dataset" },
+            { "score": 5, "label": "Automated validation rules run and errors are logged" }
+          ]
+        },
+        {
+          "id": "C7",
+          "type": "scale_anchored",
+          "dimension": "data_management",
+          "prompt": "If two versions of the same dataset exist, how do you know which one is correct?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "We would not know" },
+            { "score": 1, "label": "We ask around" },
+            { "score": 2, "label": "The file name or date tells us" },
+            { "score": 3, "label": "There is one agreed master location" },
+            { "score": 4, "label": "Versioning is controlled by the system" },
+            { "score": 5, "label": "Version history and changes are fully traceable" }
+          ]
+        },
+        {
+          "id": "C8",
+          "type": "scale_anchored",
+          "dimension": "data_management",
+          "prompt": "How complete is your information about the assets you are responsible for?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "We do not have an inventory" },
+            { "score": 1, "label": "Partial and out of date" },
+            { "score": 2, "label": "Most assets, with gaps we are aware of" },
+            { "score": 3, "label": "Complete for our main assets, updated periodically" },
+            { "score": 4, "label": "Complete and updated on a defined cycle" },
+            { "score": 5, "label": "Complete, updated, and measured with quality indicators" }
+          ]
+        },
+        {
+          "id": "C9",
+          "type": "scale_anchored",
+          "dimension": "metadata_discoverability",
+          "prompt": "When you share a dataset, what travels with it?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "Nothing — the file as it is" },
+            { "score": 1, "label": "The file name and a short note in the email" },
+            { "score": 2, "label": "An internal document explaining the fields" },
+            { "score": 3, "label": "A standard description form completed for every dataset" },
+            { "score": 4, "label": "A description record published in a catalogue others can search" },
+            { "score": 5, "label": "Descriptions generated automatically and audited periodically" }
+          ]
+        },
+        {
+          "id": "C10",
+          "type": "scale_anchored",
+          "dimension": "metadata_discoverability",
+          "prompt": "Could a new member of staff find and understand your datasets without asking a colleague?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "No — everything is in people's heads" },
+            { "score": 1, "label": "Only with a great deal of help" },
+            { "score": 2, "label": "Some datasets are documented" },
+            { "score": 3, "label": "Main datasets are documented and kept in a known place" },
+            { "score": 4, "label": "There is a catalogue with descriptions and named owners" },
+            { "score": 5, "label": "The catalogue is searchable, maintained and used daily" }
+          ]
+        },
+        {
+          "id": "C11",
+          "type": "scale_anchored",
+          "dimension": "security_access",
+          "prompt": "How is access to your information controlled?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "Anyone in the office can open anything" },
+            { "score": 1, "label": "Files sit on a shared drive with no specific rules" },
+            { "score": 2, "label": "Some folders are restricted informally" },
+            { "score": 3, "label": "Access is granted by role and requested formally" },
+            { "score": 4, "label": "Access is managed by the system with individual accounts and logs" },
+            { "score": 5, "label": "Access is reviewed periodically and audited" }
+          ]
+        },
+        {
+          "id": "C12",
+          "type": "scale_anchored",
+          "dimension": "security_access",
+          "prompt": "Has your agency classified which information is open, restricted or confidential?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "No" },
+            { "score": 1, "label": "We know informally which information is sensitive" },
+            { "score": 2, "label": "Some datasets are marked" },
+            { "score": 3, "label": "There is a written classification for our main datasets" },
+            { "score": 4, "label": "Classification is applied to every dataset and enforced by the system" },
+            { "score": 5, "label": "Classification is enforced, audited and reviewed" }
+          ]
+        },
+        {
+          "id": "C13",
+          "type": "scale_anchored",
+          "dimension": "operational_processes",
+          "prompt": "Is the procedure for updating your data written down?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "No — each person does it their own way" },
+            { "score": 1, "label": "It is known by the people who do it" },
+            { "score": 2, "label": "There are informal notes" },
+            { "score": 3, "label": "There is a documented procedure" },
+            { "score": 4, "label": "The procedure is documented and followed consistently" },
+            { "score": 5, "label": "The procedure is documented, measured and improved" }
+          ]
+        },
+        {
+          "id": "C14",
+          "type": "scale_anchored",
+          "dimension": "operational_processes",
+          "prompt": "How do you know when your data is out of date?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "We do not" },
+            { "score": 1, "label": "Someone notices eventually" },
+            { "score": 2, "label": "We check when a request comes in" },
+            { "score": 3, "label": "We review it on a schedule" },
+            { "score": 4, "label": "The system shows the last update date for every dataset" },
+            { "score": 5, "label": "We track freshness indicators and act on them" }
+          ]
+        },
+        {
+          "id": "C15",
+          "type": "scale_anchored",
+          "dimension": "governance_roles",
+          "prompt": "Is there a person formally responsible for your agency's data?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "No" },
+            { "score": 1, "label": "Someone does it informally, on top of their own job" },
+            { "score": 2, "label": "It is understood who it is, but not written anywhere" },
+            { "score": 3, "label": "The responsibility is written into someone's role" },
+            { "score": 4, "label": "There is a named data owner and steward with defined duties" },
+            { "score": 5, "label": "Roles are defined, staffed and reviewed" }
+          ]
+        },
+        {
+          "id": "C16",
+          "type": "scale_anchored",
+          "dimension": "human_capacity",
+          "prompt": "If the person who mainly handles your GIS or data work left tomorrow, what would happen?",
+          "required": true,
+          "options": [
+            { "score": 0, "label": "The work would stop" },
+            { "score": 1, "label": "Major disruption — we would have to rebuild the knowledge" },
+            { "score": 2, "label": "Someone could partially cover" },
+            { "score": 3, "label": "Another person is trained to cover" },
+            { "score": 4, "label": "The work is shared across a team" },
+            { "score": 5, "label": "There is a documented team structure with defined backups" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "D",
+      "title": "In your own words",
+      "intro": "Two open questions. These are the most useful answers you can give us — and you are welcome to finish them together in the session.",
+      "questions": [
+        {
+          "id": "D1",
+          "type": "text_long",
+          "prompt": "List your existing geospatial datasets.",
+          "required": false,
+          "source": "rowmell_r6_verbatim",
+          "max_length": 1000,
+          "placeholder": "For example:\n1. Roads\n2. Coastline\n3. Drainage wells",
+          "feeds": ["dataset_inventory", "niar_data_standard_domain_coverage"],
+          "facilitator_note": "Display live on the facilitator screen during the session and ask the room what is missing. Reliably surfaces datasets no single respondent listed alone."
+        },
+        {
+          "id": "D2",
+          "type": "text_long",
+          "prompt": "From NIAR, what three questions would you most like answered?",
+          "required": false,
+          "source": "rowmell_r7_verbatim",
+          "max_length": 1000,
+          "placeholder": "For example:\n1. Where are the water hydrants?\n2. What is the size of this agricultural plot?\n3. Where is the natural gas valve?",
+          "feeds": ["use_case_definition", "agency_value_proposition", "reciprocity_model"]
+        },
+        {
+          "id": "D3",
+          "type": "text_long",
+          "prompt": "What is the one thing that would make sharing your data with NIAR easier for your team?",
+          "required": false,
+          "source": "new_niar_addition",
+          "max_length": 500,
+          "feeds": ["onboarding_blockers", "reciprocity_model"],
+          "pairing_note": "D2 captures what the agency gains; D3 captures what NIAR needs from them. Together they form the reciprocity exchange identified in Change Readiness Finding 1 as essential for private sector engagement."
+        }
+      ]
+    }
+  ],
+
+  "derivations": {
+    "integration_tier": {
+      "reference": "TO-BE Table 10 — Integration Tiers and Method",
+      "evaluation_order": ["D", "C", "A", "B"],
+      "note": "An agency may hold a primary and a secondary tier. Evaluate all rules and record every match; do not collapse to a single value artificially.",
+      "rules": [
+        {
+          "tier": "D",
+          "label": "Assisted Digitization",
+          "condition": "B4 in ['half','most','almost_all'] OR (B3 includes 'paper_based' AND B4 == 'some')",
+          "implication": "Field Capacity Team deployment and Digitization Sub-Layer required before any integration pipeline"
+        },
+        {
+          "tier": "C",
+          "label": "Operational System API Connector",
+          "condition": "B2 includes any of ['wms','cis','erp','scada']",
+          "implication": "Lightweight REST connector, Phase 2–3 scheduling"
+        },
+        {
+          "tier": "A",
+          "label": "Direct ArcGIS Online Publication",
+          "condition": "B2 includes any of ['arcgis_online','arcgis_enterprise'] AND B9 == 'published'",
+          "implication": "Federated catalog harvest via ArcGIS Hub from day one"
+        },
+        {
+          "tier": "B",
+          "label": "File-Based Submission Portal",
+          "condition": "default",
+          "implication": "Submission Portal upload, staged and processed by the Orchestration Layer"
+        }
+      ]
+    },
+
+    "validation_gate_risk": {
+      "reference": "Annex 1 Table 4 — Validation and Quality Control Pipeline",
+      "gates": [
+        { "gate": "V1", "type": "Structural", "risk_signal": "C6 <= 1 OR B3 includes 'other'" },
+        { "gate": "V2", "type": "Spatial", "risk_signal": "B7 in ['varies','not_sure'] OR B6 includes 'tablet_phone' only" },
+        { "gate": "V3", "type": "Semantic", "risk_signal": "C5 <= 2" },
+        { "gate": "V4", "type": "Governance", "risk_signal": "C15 <= 2 OR C9 <= 2 OR B8 == 'project'" },
+        { "gate": "V5", "type": "Security", "risk_signal": "C12 <= 2 AND B10 includes any restricted classification" }
+      ]
+    },
+
+    "preprocessing_requirements": [
+      { "requirement": "Digitisation of paper records", "trigger": "B4 != 'none' OR B3 includes 'paper_based'" },
+      { "requirement": "CAD to GIS conversion", "trigger": "B3 includes 'cad_files' OR B2 includes 'autocad'" },
+      { "requirement": "Geocoding of tabular data", "trigger": "B3 includes 'ms_files'" },
+      { "requirement": "CRS normalisation", "trigger": "B7 != 'barbados_grid'" },
+      { "requirement": "Attribute schema mapping", "trigger": "C5 <= 3" },
+      { "requirement": "Metadata completion", "trigger": "C9 <= 3" },
+      { "requirement": "ArcMap to ArcGIS Pro migration", "trigger": "B2 includes 'arcmap' AND not B2 includes 'arcgis_enterprise'" }
+    ],
+
+    "divergence": {
+      "role_bands": ["leadership", "technical", "operational"],
+      "applies_to": "Block C only",
+      "readings": [
+        {
+          "id": "optimism_gap",
+          "label": "Optimism Gap",
+          "condition": "mean(leadership) - mean(operational) >= 1.5 on the same dimension",
+          "interpretation": "Not a data problem — a management visibility problem.",
+          "probe_template": "Leadership sees this working better than the people doing it daily. Can someone walk us through what actually happens on a normal week?"
+        },
+        {
+          "id": "hidden_capability",
+          "label": "Hidden Capability",
+          "condition": "mean(operational) - mean(leadership) >= 1.5 on the same dimension",
+          "interpretation": "Capability exists but is not recognised or resourced.",
+          "probe_template": "The team is doing more here than is visible upstairs. What would it take to make this official?"
+        },
+        {
+          "id": "dispersion",
+          "label": "No shared definition",
+          "condition": "max(scores) - min(scores) >= 2 on the same item",
+          "interpretation": "No shared internal definition of the practice. Predicts inconsistent submissions.",
+          "probe_template": "We have very different answers on this one. Can someone show us a concrete recent example?"
+        },
+        {
+          "id": "baseline_delta",
+          "label": "Position against the ecosystem",
+          "condition": "abs(dimension_score - 2.1) >= 1.0",
+          "interpretation": "Positions the agency without ranking it.",
+          "probe_template": "This sits well away from where most agencies are. What explains the difference here?"
+        }
+      ],
+      "facilitator_display": {
+        "top_n": 3,
+        "priority": ["optimism_gap", "dispersion", "hidden_capability", "baseline_delta"]
+      }
+    }
+  },
+
+  "closing": {
+    "heading": "Thank you",
+    "body": "Your responses are already feeding into your agency's profile. We will look at the results together in a moment — including where answers in this room differ from one another, which is usually the most interesting part of the conversation."
+  }
+}
