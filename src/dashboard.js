@@ -189,7 +189,18 @@ export async function initDashboard(root) {
   window.addEventListener("resize", () => radar.layout());
 }
 
+// Same unweighted-mean model as scoring.js's agency score (CLAUDE.md: "Do
+// not invent weighting") — this just averages numbers already published in
+// Annex 1, it doesn't re-derive anything from response data.
+function priorAgencyScore(priorScores) {
+  if (!priorScores) return null;
+  const values = Object.values(priorScores);
+  if (!values.length) return null;
+  return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
+}
+
 function buildShell(session, showIndividual) {
+  const priorScore = priorAgencyScore(session.priorScores);
   return `
     <div class="dash">
       <div class="dash__header">
@@ -200,6 +211,8 @@ function buildShell(session, showIndividual) {
         session.isRebaseline
           ? `<div class="rebaseline-banner">This is a <strong>re-baseline</strong>${
               session.priorAssessedAt ? ` — first assessed ${escapeHtml(session.priorAssessedAt)}` : ""
+            }${
+              priorScore !== null ? `, scored <strong>${priorScore}</strong> then` : ""
             }. The dashed line is this agency's own past self, not another agency.</div>`
           : ""
       }
@@ -571,7 +584,13 @@ function updateLegend(root, session) {
     { color: "#2dd4bf", label: "Agency (live)" },
     { color: "#3d5a80", label: "Ecosystem baseline (2.1)" },
   ];
-  if (session.isRebaseline) items.push({ color: "#2dd4bf", label: "Prior assessment (dashed)" });
+  if (session.isRebaseline) {
+    const priorScore = priorAgencyScore(session.priorScores);
+    items.push({
+      color: "#2dd4bf",
+      label: `Prior assessment (dashed)${priorScore !== null ? ` — ${priorScore}` : ""}`,
+    });
+  }
   legend.innerHTML = items
     .map((i) => `<span><span class="legend__dot" style="background:${i.color}"></span>${escapeHtml(i.label)}</span>`)
     .join("");
