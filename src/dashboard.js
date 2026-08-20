@@ -295,10 +295,11 @@ function renderCounter(root, count, pendingCodes, isFixture) {
 
 // Chapter-level "where is everyone right now" — collapses raw pings to the
 // latest one per client_id, same pattern as the individual-overlay's
-// per-response dedup. A client is "active" if its last ping is under 90s
-// old; older than that and they've likely put the phone down or lost
-// connectivity, so counting them would just make stale-looking data.
-const PROGRESS_ACTIVE_MS = 90 * 1000;
+// per-response dedup. form.js pings every 20s while a respondent is on the
+// question screen (both on block change and on a timer, so staying on one
+// long question still counts as presence) — 60s gives ~3 missed beats of
+// slack before someone drops off as inactive.
+const PROGRESS_ACTIVE_MS = 60 * 1000;
 
 function renderLiveProgress(root, progressRows, raw) {
   const panel = root.querySelector("#live-progress-panel");

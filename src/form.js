@@ -41,13 +41,24 @@ export async function initForm(root) {
     clientId = crypto.randomUUID();
     localStorage.setItem("niar:client-id", clientId);
   }
-  let lastReportedBlockId = null;
+  let currentProgress = null; // { blockId, blockIndex, blockTotal } — whatever was last reported
 
   function reportProgress(blockId, blockIndex, blockTotal) {
-    if (blockId === lastReportedBlockId) return;
-    lastReportedBlockId = blockId;
+    if (blockId === currentProgress?.blockId) return;
+    currentProgress = { blockId, blockIndex, blockTotal };
     storage.sendProgress?.({ clientId, blockId, blockIndex, blockTotal });
   }
+
+  // The dashboard treats a client as "active" only while pings keep
+  // arriving (see dashboard.js's PROGRESS_ACTIVE_MS) — a respondent who
+  // spends two minutes on one long-text question would otherwise silently
+  // vanish from "Right now" despite still being on that exact screen. This
+  // re-sends the same block on a timer so staying put still counts as
+  // presence, independent of the block-change ping above.
+  setInterval(() => {
+    if (state.phase !== "question" || !currentProgress) return;
+    storage.sendProgress?.({ clientId, ...currentProgress });
+  }, 20000);
 
   const state = {
     phase: session ? "welcome" : "session-error",
