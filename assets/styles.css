@@ -11,6 +11,12 @@
   --gold: #ffc726;
   --gold-dim: #c9971a;
 
+  /* data (dashboard-only, but shared here so both stylesheets agree) */
+  --sea: #2dd4bf;
+  --sky: #7dd3fc;
+  --indigo: #6366f1;
+  --ghost: #3d5a80;
+
   /* signal */
   --alert: #ff6b5a;
 

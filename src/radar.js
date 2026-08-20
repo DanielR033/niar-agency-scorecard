@@ -185,6 +185,24 @@ export function createRadar(container, instrument) {
     ctx.restore();
   }
 
+  // One respondent's own polygon — dotted (not dashed, to stay visually
+  // distinct from the prior-assessment overlay), no fill, --sky rather
+  // than a new hue. Shown for discussion, not attribution: the caller is
+  // responsible for never labeling this with anything but an anonymous,
+  // session-shuffled respondent number.
+  function drawIndividual(scoreAt, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.setLineDash([3, 4]);
+    ctx.lineCap = "round";
+    polygonPath(scoreAt);
+    ctx.strokeStyle = COLORS.sky;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   function drawAgency(scoreAt, alpha, vertexProgress) {
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -247,6 +265,7 @@ export function createRadar(container, instrument) {
   let baselineScore = null;
   let priorScores = null;
   let roleBandOverlay = null; // { leadership: [...], operational: [...] , gapDimensions: [...] } | null
+  let individualScores = null; // [8 scores] | null — one anonymous respondent
   let rafId = null;
 
   function scoreAt(i) {
@@ -274,6 +293,10 @@ export function createRadar(container, instrument) {
       }
     }
     drawAgency(scoreAt, frame.agencyAlpha, frame.vertexProgress);
+    // Drawn last (on top of the agency fill) so its dotted stroke stays
+    // fully legible instead of being muted wherever it falls inside the
+    // agency polygon's semi-transparent fill.
+    if (individualScores) drawIndividual((i) => individualScores[i], frame.agencyAlpha);
   }
 
   function animate({ duration, onFrame, onDone }) {
@@ -411,5 +434,20 @@ export function createRadar(container, instrument) {
     draw();
   }
 
-  return { reveal, update, setRoleBandOverlay, setPriorOverlay, layout: () => (layout(), draw()) };
+  // One anonymous respondent's own polygon. `scores` is an 8-key
+  // dimension-score map (computeScores([oneResponse], instrument).dimensionScores)
+  // or null to clear. Single-select — a new call replaces the previous one.
+  function setIndividualOverlay(scores) {
+    individualScores = scores ? axes.map((id) => scores[id] ?? 0) : null;
+    draw();
+  }
+
+  return {
+    reveal,
+    update,
+    setRoleBandOverlay,
+    setPriorOverlay,
+    setIndividualOverlay,
+    layout: () => (layout(), draw()),
+  };
 }

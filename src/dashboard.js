@@ -36,6 +36,11 @@ export async function initDashboard(root) {
   // e.g. for tuning the reveal with no connectivity. Every real session
   // runs on 'supabase'.
   const adapter = params.get("adapter") === "local" ? "local" : "supabase";
+  // Individual-respondent overlay + raw-answer viewer are new, higher-risk
+  // surfaces (new canvas layer, new PII-adjacent handling) landing in a
+  // tool already live with real agencies — default off, opt in per
+  // session with ?individual=1 until proven against real data.
+  const showIndividual = params.get("individual") === "1";
 
   if (!checkFacilitatorKey(facilitatorKey)) {
     root.innerHTML = `<div class="dash"><p>Missing facilitator key — append &k=FACILITATOR_KEY to this URL.</p></div>`;
@@ -59,12 +64,20 @@ export async function initDashboard(root) {
     return;
   }
 
-  root.innerHTML = buildShell(session);
+  root.innerHTML = buildShell(session, showIndividual);
   const canvasWrap = root.querySelector(".radar-canvas-wrap");
   const scoreEl = root.querySelector(".score-figure__value");
   const radar = createRadar(canvasWrap, instrument);
 
   const notes = new Map(); // divergence key -> note text, local-only this pass
+
+  // Anonymity guardrail: respondents are never labelled by A2's name or by
+  // submission order — each gets a random-once key the first time it's
+  // seen, and R# numbering is that key's rank, so "who answered first"
+  // can't be read off the list. Selection is kept by response.id (stable
+  // across polls), never by list position.
+  const shuffleKeys = new Map(); // response.id -> random sort key
+  let selectedResponseId = null;
 
   let lastSignature = null;
   let firstRun = true;
@@ -107,6 +120,7 @@ export async function initDashboard(root) {
       renderTier(root, tier, discovery);
       renderGates(root, gates, instrument);
       renderPreprocessing(root, preprocessing);
+      renderGaps(root, scores, instrument);
     }
     renderDivergence(root, divergence, instrument, notes);
 
@@ -125,6 +139,39 @@ export async function initDashboard(root) {
       radar.update(payload);
     }
 
+    if (showIndividual) {
+      for (const r of responses) {
+        if (!shuffleKeys.has(r.id)) shuffleKeys.set(r.id, Math.random());
+      }
+      // If the selected respondent vanished (shouldn't normally happen —
+      // responses are never deleted), fall back to no selection rather
+      // than pointing the overlay at stale data.
+      if (selectedResponseId && !responses.some((r) => r.id === selectedResponseId)) {
+        selectedResponseId = null;
+      }
+
+      function onSelectRespondent(id) {
+        selectedResponseId = selectedResponseId === id ? null : id;
+        applyIndividualSelection();
+        renderRespondents(root, responses, instrument, shuffleKeys, selectedResponseId, onSelectRespondent);
+      }
+
+      function applyIndividualSelection() {
+        if (!selectedResponseId) {
+          radar.setIndividualOverlay(null);
+          renderRespondentDetail(root, null, null);
+          return;
+        }
+        const respondent = responses.find((r) => r.id === selectedResponseId);
+        const individualScores = computeScores([respondent], instrument);
+        radar.setIndividualOverlay(individualScores.dimensionScores);
+        renderRespondentDetail(root, respondent, instrument);
+      }
+
+      renderRespondents(root, responses, instrument, shuffleKeys, selectedResponseId, onSelectRespondent);
+      applyIndividualSelection();
+    }
+
     wireRoleBandToggle(root, radar, scores, divergence);
     wirePriorToggle(root, radar, session);
     wireFallbackEntry(root, storage, refresh);
@@ -136,7 +183,7 @@ export async function initDashboard(root) {
   window.addEventListener("resize", () => radar.layout());
 }
 
-function buildShell(session) {
+function buildShell(session, showIndividual) {
   return `
     <div class="dash">
       <div class="dash__header">
@@ -188,9 +235,21 @@ function buildShell(session) {
         <div class="panel" id="preproc-panel">
           <p class="panel__title">Pre-processing requirements</p>
         </div>
+        <div class="panel" id="gaps-panel">
+          <p class="panel__title">Where to focus</p>
+        </div>
         <div class="panel" id="divergence-panel">
           <p class="panel__title">Top divergences to address now</p>
         </div>
+        ${
+          showIndividual
+            ? `<div class="panel" id="respondents-panel">
+                 <p class="panel__title">Respondents</p>
+                 <p class="anon-caption">Shown for discussion, not attribution — never labelled by name.</p>
+               </div>
+               <div class="panel" id="respondent-detail-panel" style="display:none"></div>`
+            : ""
+        }
       </div>
       </div>
     </div>`;
@@ -217,6 +276,131 @@ function renderWaiting(root) {
   root.querySelector("#tier-panel").innerHTML = `<p class="panel__title">Integration tier</p>${waitingHtml}`;
   root.querySelector("#gates-panel").innerHTML = `<p class="panel__title">Validation pipeline risk</p>${waitingHtml}`;
   root.querySelector("#preproc-panel").innerHTML = `<p class="panel__title">Pre-processing requirements</p>${waitingHtml}`;
+  root.querySelector("#gaps-panel").innerHTML = `<p class="panel__title">Where to focus</p>${waitingHtml}`;
+}
+
+// Ranked ascending by score — ties keep questions.json's dimension order
+// (Array.sort is stable), so equal scores don't look meaningfully ordered
+// when they aren't. Framed as the room's agenda, not a verdict: coral
+// divergence language, never "failed" or "below standard".
+function renderGaps(root, scores, instrument) {
+  const panel = root.querySelector("#gaps-panel");
+  const dims = instrument.dimensions
+    .map((d) => ({ id: d.id, label: d.label, score: scores.dimensionScores[d.id] }))
+    .filter((d) => d.score !== null)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3);
+
+  if (dims.length === 0) {
+    panel.innerHTML = `<p class="panel__title">Where to focus</p><p class="empty-note">Waiting for the first response.</p>`;
+    return;
+  }
+
+  panel.innerHTML = `
+    <p class="panel__title">Where to focus</p>
+    <ul class="gaps-list">
+      ${dims
+        .map(
+          (d, i) =>
+            `<li class="gaps-list__item${i === 0 ? " gaps-list__item--top" : ""}">
+               <span class="gaps-list__label">${escapeHtml(d.label)}</span>
+               <span class="gaps-list__score">${d.score.toFixed(1)}</span>
+             </li>`
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+// ---- individual-respondent overlay + raw viewer (?individual=1 only) ----
+
+function renderRespondents(root, responses, instrument, shuffleKeys, selectedId, onSelect) {
+  const panel = root.querySelector("#respondents-panel");
+  if (!panel) return;
+
+  const ordered = [...responses].sort((a, b) => shuffleKeys.get(a.id) - shuffleKeys.get(b.id));
+  const numbered = ordered.map((r, i) => ({ response: r, order: i + 1 }));
+
+  const byBand = new Map();
+  for (const entry of numbered) {
+    const band = entry.response.roleBand || "unassigned";
+    if (!byBand.has(band)) byBand.set(band, []);
+    byBand.get(band).push(entry);
+  }
+
+  const bandOrder = ["leadership", "technical", "operational", "unassigned"];
+  const sections = bandOrder
+    .filter((band) => byBand.has(band))
+    .map((band) => {
+      const chips = byBand
+        .get(band)
+        .map(
+          ({ response, order }) => `
+          <button type="button" class="respondent-chip" data-id="${escapeHtml(response.id)}" aria-pressed="${
+            response.id === selectedId
+          }">R${order}</button>`
+        )
+        .join("");
+      return `<div class="respondent-band"><p class="respondent-band__title">${escapeHtml(band)}</p><div class="respondent-band__chips">${chips}</div></div>`;
+    })
+    .join("");
+
+  panel.innerHTML = `
+    <p class="panel__title">Respondents</p>
+    <p class="anon-caption">Shown for discussion, not attribution — never labelled by name.</p>
+    ${sections}
+  `;
+
+  panel.querySelectorAll(".respondent-chip").forEach((el) => {
+    el.addEventListener("click", () => onSelect(el.dataset.id));
+  });
+}
+
+function renderRespondentDetail(root, response, instrument) {
+  const panel = root.querySelector("#respondent-detail-panel");
+  if (!panel) return;
+
+  if (!response) {
+    panel.style.display = "none";
+    panel.innerHTML = "";
+    return;
+  }
+
+  panel.style.display = "block";
+  const rows = [];
+  for (const block of instrument.raw.blocks) {
+    for (const question of block.questions) {
+      // A1 is session config, not a respondent's answer. A2 is the one
+      // field that could carry a real name — never shown here, even
+      // though the respondent may have typed one in.
+      if (question.type === "hidden" || question.id === "A2") continue;
+      const value = response.answers[question.id];
+      if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) continue;
+      rows.push(`
+        <div class="respondent-answer">
+          <p class="respondent-answer__prompt">${escapeHtml(question.prompt)}</p>
+          <p class="respondent-answer__value">${escapeHtml(formatAnswer(question, value, instrument))}</p>
+        </div>
+      `);
+    }
+  }
+
+  panel.innerHTML = `
+    <p class="panel__title">Respondent detail</p>
+    <p class="anon-caption">Shown for discussion, not attribution.</p>
+    ${rows.join("")}
+  `;
+}
+
+function formatAnswer(question, value, instrument) {
+  const labelFor = (v) => instrument.optionIndex.get(`${question.id}:${v}`)?.label ?? String(v);
+  if (question.type === "multi_select") return value.map(labelFor).join(", ");
+  if (question.type === "scale_anchored") {
+    const option = question.options.find((o) => o.score === value);
+    return option ? `${value} — ${option.label}` : String(value);
+  }
+  if (question.type === "single_select") return labelFor(value);
+  return String(value); // text_short / text_long
 }
 
 function renderTier(root, tier, discovery) {
