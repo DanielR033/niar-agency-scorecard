@@ -334,6 +334,33 @@
   font-size: 15px;
 }
 
+/* "Right now" live chapter-progress panel */
+
+.progress-block-row {
+  margin-top: 10px;
+}
+
+.progress-block-row__label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.progress-block-row__track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-lift);
+  overflow: hidden;
+}
+
+.progress-block-row__fill {
+  height: 100%;
+  background: var(--sky);
+  transition: width 400ms ease-out;
+}
+
 /* "Where to focus" gaps panel */
 
 .gaps-list {

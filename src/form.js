@@ -34,6 +34,21 @@ export async function initForm(root) {
   });
   const session = await storage.session();
 
+  // One id per browser, not per session — good enough for a heartbeat that
+  // only ever shows counts, never identity, on the facilitator dashboard.
+  let clientId = localStorage.getItem("niar:client-id");
+  if (!clientId) {
+    clientId = crypto.randomUUID();
+    localStorage.setItem("niar:client-id", clientId);
+  }
+  let lastReportedBlockId = null;
+
+  function reportProgress(blockId, blockIndex, blockTotal) {
+    if (blockId === lastReportedBlockId) return;
+    lastReportedBlockId = blockId;
+    storage.sendProgress?.({ clientId, blockId, blockIndex, blockTotal });
+  }
+
   const state = {
     phase: session ? "welcome" : "session-error",
     currentIndex: 0,
@@ -64,6 +79,14 @@ export async function initForm(root) {
 
   function visibleQuestions() {
     return allQuestionsInOrder().filter((q) => isVisible(q, state.answers));
+  }
+
+  function visibleBlockIds() {
+    const ids = [];
+    for (const q of visibleQuestions()) {
+      if (ids[ids.length - 1] !== q.blockId) ids.push(q.blockId);
+    }
+    return ids;
   }
 
   function isAnswered(question) {
@@ -114,6 +137,7 @@ export async function initForm(root) {
       answers: state.answers,
     };
     state.result = await storage.submit(payload);
+    reportProgress("done", visibleBlockIds().length, visibleBlockIds().length);
     state.phase = "closing";
     submitting = false;
     render();
@@ -219,6 +243,9 @@ export async function initForm(root) {
     if (state.currentIndex >= steps.length) state.currentIndex = Math.max(0, steps.length - 1);
     const question = steps[state.currentIndex];
     rule.querySelector(".progress-rule__fill").style.width = `${(state.currentIndex / steps.length) * 100}%`;
+
+    const blockIds = visibleBlockIds();
+    reportProgress(question.blockId, blockIds.indexOf(question.blockId), blockIds.length);
 
     const screen = document.createElement("div");
     screen.className = "screen screen--entering";

@@ -46,6 +46,7 @@ function localAdapter({ sessionCode, simulateFailureRate = 0, submitAttempts = 3
   const draftKey = `niar:${sessionCode}:draft`;
   const responsesKey = `niar:${sessionCode}:responses`;
   const fallbackKey = `niar:${sessionCode}:fallback`;
+  const progressKey = `niar:${sessionCode}:progress`;
 
   function attemptSubmit(payload) {
     if (Math.random() < simulateFailureRate) {
@@ -112,6 +113,19 @@ function localAdapter({ sessionCode, simulateFailureRate = 0, submitAttempts = 3
       delete held[code];
       localStorage.setItem(fallbackKey, JSON.stringify(held));
       return { status: "ok" };
+    },
+
+    // Chapter-level heartbeat, kept per client_id so the dashboard can
+    // collapse to "latest ping per respondent" the same way both adapters
+    // do. Local adapter keeps this in localStorage purely for dev/demo use.
+    sendProgress({ clientId, blockId, blockIndex, blockTotal }) {
+      const all = readJSON(progressKey, {});
+      all[clientId] = { clientId, blockId, blockIndex, blockTotal, updatedAt: Date.now() };
+      localStorage.setItem(progressKey, JSON.stringify(all));
+    },
+
+    async listProgress() {
+      return Object.values(readJSON(progressKey, {}));
     },
   };
 }
@@ -239,6 +253,44 @@ function supabaseAdapter({
       delete held[code];
       localStorage.setItem(fallbackKey, JSON.stringify(held));
       return { status: "ok" };
+    },
+
+    // Best-effort — never retried, never throws into the caller. A missed
+    // heartbeat just means the dashboard's chapter tracker is briefly
+    // stale, which is a fair trade against risking the actual submission
+    // flow on a heartbeat's network failure.
+    sendProgress({ clientId, blockId, blockIndex, blockTotal }) {
+      fetchWithTimeout(
+        `${restUrl}/progress`,
+        {
+          method: "POST",
+          headers: { ...headers, Prefer: "return=minimal" },
+          body: JSON.stringify({
+            session_code: sessionCode,
+            client_id: clientId,
+            block_id: blockId,
+            block_index: blockIndex,
+            block_total: blockTotal,
+          }),
+        },
+        4000
+      ).catch(() => {});
+    },
+
+    async listProgress() {
+      if (!facilitatorKey) return [];
+      try {
+        const rows = await callRpc("get_session_progress", { p_code: sessionCode, p_key: facilitatorKey });
+        return rows.map((r) => ({
+          clientId: r.client_id,
+          blockId: r.block_id,
+          blockIndex: r.block_index,
+          blockTotal: r.block_total,
+          updatedAt: new Date(r.updated_at).getTime(),
+        }));
+      } catch {
+        return [];
+      }
     },
   };
 }

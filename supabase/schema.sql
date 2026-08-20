@@ -47,12 +47,28 @@ comment on table responses is
 
 create index if not exists responses_session_code_idx on responses (session_code);
 
+create table if not exists progress (
+  id            uuid primary key default gen_random_uuid(),
+  session_code  text not null references sessions(code),
+  client_id     text not null,
+  block_id      text not null,
+  block_index   int not null,
+  block_total   int not null,
+  updated_at    timestamptz not null default now()
+);
+
+comment on table progress is
+  'Best-effort chapter-level heartbeat pings from the respondent form (single-page mobile layout only). Anon may INSERT only, same as responses. Never holds answer content — block id/index only. Read only through get_session_progress.';
+
+create index if not exists progress_session_code_idx on progress (session_code);
+
 -- ---------------------------------------------------------------------
 -- Row-Level Security
 -- ---------------------------------------------------------------------
 
 alter table sessions enable row level security;
 alter table responses enable row level security;
+alter table progress enable row level security;
 
 -- sessions: no policy for anon at all — RLS with zero matching policies
 -- means zero rows, for every operation, for that role. Deliberate: all
@@ -65,12 +81,20 @@ create policy responses_insert_anon on responses
   to anon
   with check (true);
 
+-- progress: same shape as responses — anon may insert, nothing else.
+create policy progress_insert_anon on progress
+  for insert
+  to anon
+  with check (true);
+
 -- (No select/update/delete policy for anon is created, so those
 -- operations return zero rows / are rejected for that role under RLS.)
 
 revoke all on sessions from anon;
 revoke all on responses from anon;
+revoke all on progress from anon;
 grant insert on responses to anon;
+grant insert on progress to anon;
 
 -- ---------------------------------------------------------------------
 -- RPCs (SECURITY DEFINER — run as the function owner, bypassing RLS,
@@ -117,6 +141,28 @@ $$;
 
 revoke all on function get_session_responses(text, text) from public;
 grant execute on function get_session_responses(text, text) to anon;
+
+-- Facilitator-only, same key requirement as get_session_responses. Returns
+-- raw pings (not deduped to latest-per-client) — the dashboard collapses
+-- to one row per client_id client-side, same shape as get_session_responses
+-- keeps aggregation logic out of SQL. Capped to the last hour so a session
+-- left open overnight can't grow the response payload unbounded.
+create or replace function get_session_progress(p_code text, p_key text)
+returns setof progress
+language sql
+security definer
+set search_path = public
+as $$
+  select p.*
+  from progress p
+  join sessions s on s.code = p.session_code
+  where s.code = p_code
+    and s.facilitator_key = p_key
+    and p.updated_at > now() - interval '1 hour';
+$$;
+
+revoke all on function get_session_progress(text, text) from public;
+grant execute on function get_session_progress(text, text) to anon;
 
 -- ---------------------------------------------------------------------
 -- Seeding a session (run manually per agency, not from client code)

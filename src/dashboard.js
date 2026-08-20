@@ -95,6 +95,12 @@ export async function initDashboard(root) {
   }
 
   async function refresh() {
+    // Progress pings change far more often than actual submissions — they'd
+    // never repaint if gated behind the same response-signature check below,
+    // so this panel updates on every poll independent of that guard.
+    const progressRows = (await storage.listProgress?.()) ?? [];
+    renderLiveProgress(root, progressRows, raw);
+
     const { responses, isFixture } = await loadResponses();
     const signature = signatureOf(responses) + (isFixture ? ":fixture" : "");
     if (signature === lastSignature) return;
@@ -226,6 +232,9 @@ function buildShell(session, showIndividual) {
             <button type="button" id="fallback-submit">Add</button>
           </div>
         </div>
+        <div class="panel" id="live-progress-panel">
+          <p class="panel__title">Right now</p>
+        </div>
         <div class="panel" id="tier-panel">
           <p class="panel__title">Integration tier</p>
         </div>
@@ -269,6 +278,60 @@ function renderCounter(root, count, pendingCodes, isFixture) {
   fallbackNote.textContent = pendingCodes.length
     ? `${pendingCodes.length} response${pendingCodes.length === 1 ? "" : "s"} held on a respondent's phone, not yet counted: ${pendingCodes.join(", ")}`
     : "";
+}
+
+// Chapter-level "where is everyone right now" — collapses raw pings to the
+// latest one per client_id, same pattern as the individual-overlay's
+// per-response dedup. A client is "active" if its last ping is under 90s
+// old; older than that and they've likely put the phone down or lost
+// connectivity, so counting them would just make stale-looking data.
+const PROGRESS_ACTIVE_MS = 90 * 1000;
+
+function renderLiveProgress(root, progressRows, raw) {
+  const panel = root.querySelector("#live-progress-panel");
+  if (!panel) return;
+
+  const latestByClient = new Map();
+  for (const row of progressRows) {
+    const prev = latestByClient.get(row.clientId);
+    if (!prev || row.updatedAt > prev.updatedAt) latestByClient.set(row.clientId, row);
+  }
+  const now = Date.now();
+  const active = [...latestByClient.values()].filter((r) => now - r.updatedAt < PROGRESS_ACTIVE_MS);
+
+  if (active.length === 0) {
+    panel.innerHTML = `<p class="panel__title">Right now</p><p class="empty-note">No one answering at the moment.</p>`;
+    return;
+  }
+
+  const counts = new Map(raw.blocks.map((b) => [b.id, 0]));
+  let justFinished = 0;
+  for (const r of active) {
+    if (r.blockId === "done") {
+      justFinished += 1;
+    } else if (counts.has(r.blockId)) {
+      counts.set(r.blockId, counts.get(r.blockId) + 1);
+    }
+  }
+
+  const rows = raw.blocks
+    .map((b) => {
+      const count = counts.get(b.id) || 0;
+      const pct = Math.round((count / active.length) * 100);
+      return `
+        <div class="progress-block-row">
+          <div class="progress-block-row__label"><span>${escapeHtml(b.title)}</span><span>${count}</span></div>
+          <div class="progress-block-row__track"><div class="progress-block-row__fill" style="width:${pct}%"></div></div>
+        </div>`;
+    })
+    .join("");
+
+  panel.innerHTML = `
+    <p class="panel__title">Right now</p>
+    <div class="counter-row"><span>Answering</span><span class="counter-row__value">${active.length}</span></div>
+    ${rows}
+    ${justFinished ? `<p class="empty-note">${justFinished} just finished</p>` : ""}
+  `;
 }
 
 function renderWaiting(root) {
