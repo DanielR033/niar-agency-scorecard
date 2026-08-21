@@ -66,12 +66,68 @@
 }
 
 .radar-panel {
+  position: relative;
   background: var(--surface);
   border-radius: 8px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Reveal gate — score/radar/derived panels stay hidden until the
+   facilitator deliberately clicks through, so a partial live score never
+   reads as "the result" mid-session. */
+.reveal-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(10, 22, 40, 0.95);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash__body[data-revealed="true"] .reveal-gate {
+  display: none;
+}
+
+.reveal-gate__inner {
+  text-align: center;
+}
+
+.reveal-gate__label {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+
+.dash__body[data-revealed="false"] #radar-canvas-wrap,
+.dash__body[data-revealed="false"] #radar-controls,
+.dash__body[data-revealed="false"] #legend,
+.dash__body[data-revealed="false"] #tier-panel,
+.dash__body[data-revealed="false"] #gates-panel,
+.dash__body[data-revealed="false"] #preproc-panel,
+.dash__body[data-revealed="false"] #gaps-panel,
+.dash__body[data-revealed="false"] #divergence-panel {
+  visibility: hidden;
+}
+
+.day-compare-btn {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.day-compare-panel {
+  margin-top: 12px;
+}
+
+.day-compare__total {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+  font-weight: 600;
 }
 
 .radar-canvas-wrap {

@@ -82,6 +82,17 @@ export async function initDashboard(root) {
   let lastSignature = null;
   let firstRun = true;
 
+  // Multi-day sessions (MTW's two-day re-baseline run): the radar and every
+  // derived panel stay veiled until the facilitator deliberately reveals
+  // them — otherwise whatever's projected mid-session shows a partial score
+  // building live off only the respondents answered so far, which reads as
+  // "the result" when it isn't yet. Day-by-day comparison is a second,
+  // independent gate — the facilitator's own tool, not necessarily meant
+  // for the room, so it has its own button rather than riding the same one.
+  let scoreRevealed = false;
+  let dayCompareOn = false;
+  let latestBundle = null;
+
   // 'local' adapter only: seed fixtures when there are zero real responses.
   // Gated on adapter type, not on data emptiness, so a real empty Wave 2
   // session on 'supabase' renders "waiting for respondents" instead of
@@ -111,24 +122,16 @@ export async function initDashboard(root) {
 
     renderCounter(root, responses.length, storage.listPendingFallbackCodes(), isFixture);
     updateLegend(root, session);
+    renderDayCompare(root, computeDayBuckets(responses, instrument), scores.agencyScore);
 
     // With zero responses, every Discovery-block field is undefined, and
     // conditions like "B4 != 'none'" evaluate true against `undefined` —
     // showing pre-processing requirements and a tier nobody's data actually
     // implied yet. Show an honest waiting state instead of derived noise.
-    if (responses.length === 0) {
-      renderWaiting(root);
-    } else {
-      const tier = evaluateIntegrationTier(responses, instrument, scores);
-      const gates = evaluateValidationGateRisk(responses, instrument, scores);
-      const preprocessing = evaluatePreprocessingRequirements(responses, instrument, scores);
-      const discovery = aggregateAgencyAnswers(responses, instrument);
-      renderTier(root, tier, discovery);
-      renderGates(root, gates, instrument);
-      renderPreprocessing(root, preprocessing);
-      renderGaps(root, scores, instrument);
-    }
-    renderDivergence(root, divergence, instrument, notes);
+    const tier = responses.length ? evaluateIntegrationTier(responses, instrument, scores) : null;
+    const gates = responses.length ? evaluateValidationGateRisk(responses, instrument, scores) : null;
+    const preprocessing = responses.length ? evaluatePreprocessingRequirements(responses, instrument, scores) : null;
+    const discovery = responses.length ? aggregateAgencyAnswers(responses, instrument) : null;
 
     const payload = {
       dimensionScores: scores.dimensionScores,
@@ -138,12 +141,8 @@ export async function initDashboard(root) {
       scoreEl,
     };
 
-    if (firstRun) {
-      radar.reveal(payload);
-      firstRun = false;
-    } else {
-      radar.update(payload);
-    }
+    latestBundle = { responses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes };
+    if (scoreRevealed) paintRevealed(latestBundle);
 
     if (showIndividual) {
       for (const r of responses) {
@@ -183,10 +182,88 @@ export async function initDashboard(root) {
     wireFallbackEntry(root, storage, refresh);
   }
 
+  function paintRevealed(bundle) {
+    if (!bundle) return;
+    const { responses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes } = bundle;
+    if (responses.length === 0) {
+      renderWaiting(root);
+    } else {
+      renderTier(root, tier, discovery);
+      renderGates(root, gates, instrument);
+      renderPreprocessing(root, preprocessing);
+      renderGaps(root, scores, instrument);
+    }
+    renderDivergence(root, divergence, instrument, notes);
+    if (firstRun) {
+      radar.reveal(payload);
+      firstRun = false;
+    } else {
+      radar.update(payload);
+    }
+  }
+
+  function wireRevealGate() {
+    const btn = root.querySelector("#reveal-score-btn");
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => {
+      scoreRevealed = true;
+      root.querySelector(".dash__body").dataset.revealed = "true";
+      paintRevealed(latestBundle);
+    });
+  }
+
+  function wireDayCompareToggle() {
+    const btn = root.querySelector("#day-compare-btn");
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => {
+      dayCompareOn = !dayCompareOn;
+      btn.setAttribute("aria-pressed", String(dayCompareOn));
+      root.querySelector("#day-compare-panel").style.display = dayCompareOn ? "block" : "none";
+    });
+  }
+  wireRevealGate();
+  wireDayCompareToggle();
+
   await refresh();
   setInterval(refresh, POLL_MS);
 
   window.addEventListener("resize", () => radar.layout());
+}
+
+// Groups responses by the local calendar date they were submitted on — the
+// only signal available for "yesterday vs today" since both days share one
+// session code by design (MTW's re-baseline runs as one accumulating
+// session, not two). Each bucket gets its own agency score via the same
+// unweighted-mean engine as the consolidated figure, nothing re-derived.
+function computeDayBuckets(responses, instrument) {
+  const byDay = new Map();
+  for (const r of responses) {
+    const date = new Date(r.submittedAt);
+    const day = Number.isNaN(date.getTime()) ? "unknown date" : date.toLocaleDateString("en-CA");
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push(r);
+  }
+  return [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, rs]) => ({ day, n: rs.length, agencyScore: computeScores(rs, instrument).agencyScore }));
+}
+
+function renderDayCompare(root, buckets, consolidatedScore) {
+  const panel = root.querySelector("#day-compare-panel");
+  if (!panel) return;
+  if (buckets.length === 0) {
+    panel.innerHTML = `<p class="empty-note">No responses yet.</p>`;
+    return;
+  }
+  const rows = buckets
+    .map(
+      (b) =>
+        `<div class="counter-row"><span>${escapeHtml(b.day)} (n=${b.n})</span><span class="counter-row__value">${b.agencyScore}</span></div>`
+    )
+    .join("");
+  panel.innerHTML = `${rows}<div class="counter-row day-compare__total"><span>Consolidated</span><span class="counter-row__value">${consolidatedScore}</span></div>`;
 }
 
 // Same unweighted-mean model as scoring.js's agency score (CLAUDE.md: "Do
@@ -216,15 +293,21 @@ function buildShell(session, showIndividual) {
             }. The dashed line is this agency's own past self, not another agency.</div>`
           : ""
       }
-      <div class="dash__body">
+      <div class="dash__body" data-revealed="false">
       <div class="radar-panel">
-        <div class="radar-canvas-wrap">
+        <div class="reveal-gate" id="reveal-gate">
+          <div class="reveal-gate__inner">
+            <p class="reveal-gate__label">Score not revealed yet</p>
+            <button type="button" class="primary-btn" id="reveal-score-btn">Revelar puntaje consolidado</button>
+          </div>
+        </div>
+        <div class="radar-canvas-wrap" id="radar-canvas-wrap">
           <div class="score-figure">
             <div class="score-figure__value">0.0</div>
             <div class="score-figure__label">Agency score · baseline 2.1</div>
           </div>
         </div>
-        <div class="radar-controls">
+        <div class="radar-controls" id="radar-controls">
           <button type="button" class="toggle-btn" id="role-band-toggle" aria-pressed="false">Show role bands</button>
           ${
             session.isRebaseline
@@ -244,6 +327,8 @@ function buildShell(session, showIndividual) {
             <input type="text" id="fallback-input" placeholder="Enter fallback code" maxlength="6" />
             <button type="button" id="fallback-submit">Add</button>
           </div>
+          <button type="button" class="toggle-btn day-compare-btn" id="day-compare-btn" aria-pressed="false">Ver ayer vs hoy</button>
+          <div class="day-compare-panel" id="day-compare-panel" style="display:none"></div>
         </div>
         <div class="panel" id="live-progress-panel">
           <p class="panel__title">Right now</p>
