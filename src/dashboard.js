@@ -82,12 +82,21 @@ export async function initDashboard(root) {
   let lastSignature = null;
   let firstRun = true;
 
-  // Multi-day sessions (MTW's two-day re-baseline run): the live radar and
-  // panels keep behaving exactly as any other session — building up as
-  // responses arrive, same as day 1. The only thing gated is the day-by-day
-  // breakdown, which is the facilitator's own tool, not meant for the room
-  // by default, so it sits behind its own toggle.
+  // Multi-day sessions (MTW's two-day re-baseline run): all days share one
+  // session code by design, so without this the live radar on day 2 would
+  // start already showing day 1's consolidated score — a partial-looking
+  // number that's actually already final, before anyone in today's room has
+  // answered anything. The live view defaults to *today's* responses only
+  // (genuinely 0 until today's first submission), same live-build behaviour
+  // as any single-day session. The true across-days consolidated figure is
+  // one deliberate toggle away, not automatic.
   let dayCompareOn = false;
+  let consolidatedOn = false;
+
+  function isToday(submittedAt, todayKey) {
+    const d = new Date(submittedAt);
+    return !Number.isNaN(d.getTime()) && d.toLocaleDateString("en-CA") === todayKey;
+  }
 
   // 'local' adapter only: seed fixtures when there are zero real responses.
   // Gated on adapter type, not on data emptiness, so a real empty Wave 2
@@ -113,21 +122,27 @@ export async function initDashboard(root) {
     if (signature === lastSignature) return;
     lastSignature = signature;
 
-    const scores = computeScores(responses, instrument);
-    const divergence = computeDivergence(responses, instrument, scores);
+    const todayKey = new Date().toLocaleDateString("en-CA");
+    const todayResponses = responses.filter((r) => isToday(r.submittedAt, todayKey));
+    const liveResponses = consolidatedOn ? responses : todayResponses;
 
-    renderCounter(root, responses.length, storage.listPendingFallbackCodes(), isFixture);
+    const scores = computeScores(liveResponses, instrument);
+    const divergence = computeDivergence(liveResponses, instrument, scores);
+
+    renderCounter(root, liveResponses.length, storage.listPendingFallbackCodes(), isFixture);
     updateLegend(root, session);
-    renderDayCompare(root, computeDayBuckets(responses, instrument), scores.agencyScore);
+    renderDayCompare(root, computeDayBuckets(responses, instrument), computeScores(responses, instrument).agencyScore);
 
     // With zero responses, every Discovery-block field is undefined, and
     // conditions like "B4 != 'none'" evaluate true against `undefined` —
     // showing pre-processing requirements and a tier nobody's data actually
     // implied yet. Show an honest waiting state instead of derived noise.
-    const tier = responses.length ? evaluateIntegrationTier(responses, instrument, scores) : null;
-    const gates = responses.length ? evaluateValidationGateRisk(responses, instrument, scores) : null;
-    const preprocessing = responses.length ? evaluatePreprocessingRequirements(responses, instrument, scores) : null;
-    const discovery = responses.length ? aggregateAgencyAnswers(responses, instrument) : null;
+    const tier = liveResponses.length ? evaluateIntegrationTier(liveResponses, instrument, scores) : null;
+    const gates = liveResponses.length ? evaluateValidationGateRisk(liveResponses, instrument, scores) : null;
+    const preprocessing = liveResponses.length
+      ? evaluatePreprocessingRequirements(liveResponses, instrument, scores)
+      : null;
+    const discovery = liveResponses.length ? aggregateAgencyAnswers(liveResponses, instrument) : null;
 
     const payload = {
       dimensionScores: scores.dimensionScores,
@@ -137,7 +152,7 @@ export async function initDashboard(root) {
       scoreEl,
     };
 
-    paintRevealed({ responses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes });
+    paintRevealed({ responses: liveResponses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes });
 
     if (showIndividual) {
       for (const r of responses) {
@@ -196,6 +211,21 @@ export async function initDashboard(root) {
     }
   }
 
+  function wireConsolidatedToggle() {
+    const btn = root.querySelector("#consolidated-toggle");
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => {
+      consolidatedOn = !consolidatedOn;
+      btn.setAttribute("aria-pressed", String(consolidatedOn));
+      btn.textContent = consolidatedOn ? "Volver a hoy en vivo" : "Revelar consolidado (ayer + hoy)";
+      // Toggling doesn't change which responses exist, so the signature
+      // guard in refresh() would otherwise skip repainting entirely.
+      lastSignature = null;
+      refresh();
+    });
+  }
+
   function wireDayCompareToggle() {
     const btn = root.querySelector("#day-compare-btn");
     if (!btn || btn.dataset.wired) return;
@@ -207,6 +237,7 @@ export async function initDashboard(root) {
     });
   }
   wireDayCompareToggle();
+  wireConsolidatedToggle();
 
   await refresh();
   setInterval(refresh, POLL_MS);
@@ -285,6 +316,11 @@ function buildShell(session, showIndividual) {
         </div>
         <div class="radar-controls" id="radar-controls">
           <button type="button" class="toggle-btn" id="role-band-toggle" aria-pressed="false">Show role bands</button>
+          ${
+            session.isRebaseline
+              ? `<button type="button" class="toggle-btn" id="consolidated-toggle" aria-pressed="false">Revelar consolidado (ayer + hoy)</button>`
+              : ""
+          }
           ${
             session.isRebaseline
               ? `<button type="button" class="toggle-btn" id="prior-toggle" aria-pressed="true">Show prior assessment</button>`
