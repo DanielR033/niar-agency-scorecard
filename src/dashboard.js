@@ -82,16 +82,12 @@ export async function initDashboard(root) {
   let lastSignature = null;
   let firstRun = true;
 
-  // Multi-day sessions (MTW's two-day re-baseline run): the radar and every
-  // derived panel stay veiled until the facilitator deliberately reveals
-  // them — otherwise whatever's projected mid-session shows a partial score
-  // building live off only the respondents answered so far, which reads as
-  // "the result" when it isn't yet. Day-by-day comparison is a second,
-  // independent gate — the facilitator's own tool, not necessarily meant
-  // for the room, so it has its own button rather than riding the same one.
-  let scoreRevealed = false;
+  // Multi-day sessions (MTW's two-day re-baseline run): the live radar and
+  // panels keep behaving exactly as any other session — building up as
+  // responses arrive, same as day 1. The only thing gated is the day-by-day
+  // breakdown, which is the facilitator's own tool, not meant for the room
+  // by default, so it sits behind its own toggle.
   let dayCompareOn = false;
-  let latestBundle = null;
 
   // 'local' adapter only: seed fixtures when there are zero real responses.
   // Gated on adapter type, not on data emptiness, so a real empty Wave 2
@@ -141,8 +137,7 @@ export async function initDashboard(root) {
       scoreEl,
     };
 
-    latestBundle = { responses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes };
-    if (scoreRevealed) paintRevealed(latestBundle);
+    paintRevealed({ responses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes });
 
     if (showIndividual) {
       for (const r of responses) {
@@ -183,7 +178,6 @@ export async function initDashboard(root) {
   }
 
   function paintRevealed(bundle) {
-    if (!bundle) return;
     const { responses, scores, divergence, tier, gates, preprocessing, discovery, payload, notes } = bundle;
     if (responses.length === 0) {
       renderWaiting(root);
@@ -202,17 +196,6 @@ export async function initDashboard(root) {
     }
   }
 
-  function wireRevealGate() {
-    const btn = root.querySelector("#reveal-score-btn");
-    if (!btn || btn.dataset.wired) return;
-    btn.dataset.wired = "1";
-    btn.addEventListener("click", () => {
-      scoreRevealed = true;
-      root.querySelector(".dash__body").dataset.revealed = "true";
-      paintRevealed(latestBundle);
-    });
-  }
-
   function wireDayCompareToggle() {
     const btn = root.querySelector("#day-compare-btn");
     if (!btn || btn.dataset.wired) return;
@@ -223,7 +206,6 @@ export async function initDashboard(root) {
       root.querySelector("#day-compare-panel").style.display = dayCompareOn ? "block" : "none";
     });
   }
-  wireRevealGate();
   wireDayCompareToggle();
 
   await refresh();
@@ -293,14 +275,8 @@ function buildShell(session, showIndividual) {
             }. The dashed line is this agency's own past self, not another agency.</div>`
           : ""
       }
-      <div class="dash__body" data-revealed="false">
+      <div class="dash__body">
       <div class="radar-panel">
-        <div class="reveal-gate" id="reveal-gate">
-          <div class="reveal-gate__inner">
-            <p class="reveal-gate__label">Score not revealed yet</p>
-            <button type="button" class="primary-btn" id="reveal-score-btn">Revelar puntaje consolidado</button>
-          </div>
-        </div>
         <div class="radar-canvas-wrap" id="radar-canvas-wrap">
           <div class="score-figure">
             <div class="score-figure__value">0.0</div>
